@@ -1,0 +1,25 @@
+app:
+  name: "web_app"
+  mod: "dev"
+  port: 8081
+  start_time: "2022-04-13"
+  machine_id: 2
+  
+log:
+  level: "debug"
+  filename: "analyze_signal.log"
+  max_size: 200
+  max_age: 30
+  max_backups: 7
+
+rabbitmq:
+  user: "guest"
+  pwd: "guest"
+  ipv4_addr: "127.0.0.1"
+  port: "5672"
+  content-type: "application/json"
+  exchanger: "signal"
+
+
+analyze:
+  size: 100
