@@ -7,6 +7,7 @@ import (
 	"analyze/models"
 	"analyze/settings"
 	"encoding/json"
+	"fmt"
 	"log"
 
 	"github.com/spf13/viper"
@@ -47,27 +48,44 @@ func close() {
 }
 
 func main() {
-
+	// 初始化以及关闭通道
 	setup()
 	defer close()
 
+	// for {
+	// 	signal, err := mq.Get()
+	// 	if err != nil {
+	// 		zap.L().Error("[Analyze]Cannot Fetch signals.")
+	// 		break
+	// 	}
+	// 	fmt.Println(signal.Value)
+	// }
+
 	for {
+		// 获取信号
 		signal, err := mq.Get()
 		if err != nil {
 			zap.L().Error("[Analyze]Cannot Fetch signals.")
 			break
 		}
+
+		// 加入新的信号,进行分析
 		calculate.Push(signal.Value)
 		result := models.Result{
 			Average:    calculate.GetAverage(),
 			Variance:   calculate.GetVariance(),
 			CreateTime: signal.CreateTime,
 		}
+
+		// 序列化
 		b, err := json.Marshal(result)
 		if err != nil {
-			zap.L().Error("[Analyze]Cannot Fetch signals.")
-			break
+			zap.L().Error("[Analyze]Cannot marshal the result.")
+			continue
 		}
+
+		// 将结果打包发送,传递给可视化微服务
 		mq.Publish(b)
+		zap.L().Info(fmt.Sprintf("Send %v", result))
 	}
 }

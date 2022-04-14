@@ -108,7 +108,7 @@ func Get() (signal models.Signal, err error) {
 	msg := <-msgs
 	err = json.Unmarshal(msg.Body, &signal)
 	if err != nil {
-		zap.L().Error("[RabbitMQ]Unmarshal errors.")
+		zap.L().Sugar().Errorf("[RabbitMQ]Unmarshal errors(%v).", err)
 	}
 	return
 }
@@ -116,8 +116,8 @@ func Get() (signal models.Signal, err error) {
 // 推送json内容
 func Publish(body []byte) error {
 	return ch.Publish(
-		"analyze_to_visualize", // exchange
-		"",                     // routing key
+		"",                     // exchange
+		"analyze_to_visualize", // routing key
 		false,                  // mandatory
 		false,                  // immediate
 		amqp.Publishing{
