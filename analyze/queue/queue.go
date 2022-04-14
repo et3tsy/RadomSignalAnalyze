@@ -6,9 +6,9 @@ type Queue struct {
 }
 
 // new Queue storing items
-func NewQueue(size int) (q *Queue) {
+func NewQueue() (q *Queue) {
 	q = new(Queue)
-	q.items = make([]interface{}, size)
+	q.items = make([]interface{}, 0)
 	return q
 }
 
@@ -22,6 +22,11 @@ func (q *Queue) Pop() (item interface{}) {
 	item = q.items[0]
 	q.items = q.items[1:]
 	return
+}
+
+// the front item
+func (q *Queue) Front() (item interface{}) {
+	return q.items[0]
 }
 
 // the size of queue

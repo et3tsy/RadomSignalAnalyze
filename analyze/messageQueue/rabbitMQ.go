@@ -112,3 +112,16 @@ func Get() (signal models.Signal, err error) {
 	}
 	return
 }
+
+// 推送json内容
+func Publish(body []byte) error {
+	return ch.Publish(
+		"analyze_to_visualize", // exchange
+		"",                     // routing key
+		false,                  // mandatory
+		false,                  // immediate
+		amqp.Publishing{
+			ContentType: viper.GetString("rabbitmq.content-type"),
+			Body:        body,
+		})
+}

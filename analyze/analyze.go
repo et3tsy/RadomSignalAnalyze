@@ -1,10 +1,12 @@
 package main
 
 import (
+	"analyze/calculate"
 	"analyze/logger"
 	mq "analyze/messageQueue"
+	"analyze/models"
 	"analyze/settings"
-	"fmt"
+	"encoding/json"
 	"log"
 
 	"github.com/spf13/viper"
@@ -18,7 +20,8 @@ func failOnError(err error, msg string) {
 	}
 }
 
-func main() {
+// 进行初始化设置
+func setup() {
 	// 初始化viper
 	if err := settings.Init(); err != nil {
 		failOnError(err, "init viper failed")
@@ -34,12 +37,37 @@ func main() {
 		failOnError(err, "init RabbitMQ failed")
 	}
 
+	// 初始化结果分析器
+	calculate.Init()
+}
+
+// 关闭
+func close() {
+	mq.Close()
+}
+
+func main() {
+
+	setup()
+	defer close()
+
 	for {
 		signal, err := mq.Get()
 		if err != nil {
 			zap.L().Error("[Analyze]Cannot Fetch signals.")
 			break
 		}
-		fmt.Printf("%v\n", signal.Value)
+		calculate.Push(signal.Value)
+		result := models.Result{
+			Average:    calculate.GetAverage(),
+			Variance:   calculate.GetVariance(),
+			CreateTime: signal.CreateTime,
+		}
+		b, err := json.Marshal(result)
+		if err != nil {
+			zap.L().Error("[Analyze]Cannot Fetch signals.")
+			break
+		}
+		mq.Publish(b)
 	}
 }
