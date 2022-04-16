@@ -52,15 +52,6 @@ func main() {
 	setup()
 	defer close()
 
-	// for {
-	// 	signal, err := mq.Get()
-	// 	if err != nil {
-	// 		zap.L().Error("[Analyze]Cannot Fetch signals.")
-	// 		break
-	// 	}
-	// 	fmt.Println(signal.Value)
-	// }
-
 	for {
 		// 获取信号
 		signal, err := mq.Get()
@@ -86,6 +77,6 @@ func main() {
 
 		// 将结果打包发送,传递给可视化微服务
 		mq.Publish(b)
-		zap.L().Info(fmt.Sprintf("Send %v", result))
+		zap.L().Info(fmt.Sprintf("[Analyze]Send result: %v", result))
 	}
 }
