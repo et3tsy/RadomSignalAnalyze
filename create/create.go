@@ -23,9 +23,7 @@ func failOnError(err error, msg string) {
 }
 
 const (
-	duration        time.Duration = time.Millisecond * 1000 // 产生信号的间隔时间
-	randomSignalMin               = 100                     // 信号的最小值
-	randomSignalMax               = 10000000                // 信号的最大值
+	duration time.Duration = time.Millisecond * 1000 // 产生信号的间隔时间
 )
 
 func main() {
@@ -45,7 +43,11 @@ func main() {
 	}
 
 	for {
-		value := random.GetGaussRandomNum(randomSignalMin, randomSignalMax) // 产生随机信号
+		// 产生随机信号
+		value := random.GetGaussRandomNum(
+			viper.GetInt64("signal.min"),
+			viper.GetInt64("signal.max"),
+		)
 
 		// 序列化, 以json格式传递
 		b, err := json.Marshal(models.Signal{

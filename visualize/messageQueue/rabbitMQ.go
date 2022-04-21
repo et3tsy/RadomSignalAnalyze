@@ -11,9 +11,10 @@ import (
 )
 
 var (
-	conn *amqp.Connection
-	ch   *amqp.Channel
-	msgs <-chan amqp.Delivery
+	conn      *amqp.Connection
+	ch        *amqp.Channel
+	msgSignal <-chan amqp.Delivery
+	msgResult <-chan amqp.Delivery
 )
 
 // 初始化
@@ -52,12 +53,12 @@ func Init() (err error) {
 		return err
 	}
 
-	// 声明队列
-	q, err := ch.QueueDeclare(
+	// 声明来自信号产生端的队列
+	queueFromCreate, err := ch.QueueDeclare(
 		"",    // name
 		false, // durable
 		false, // delete when unused
-		true,  // exclusive
+		false, // exclusive
 		false, // no-wait
 		nil,   // arguments
 	)
@@ -66,9 +67,23 @@ func Init() (err error) {
 		return err
 	}
 
+	// 声明来自信号分析端的队列
+	queueFromAnalyze, err := ch.QueueDeclare(
+		viper.GetString("rabbitmq.result_queue"), // name
+		false,                                    // durable
+		false,                                    // delete when unused
+		false,                                    // exclusive
+		false,                                    // no-wait
+		nil,                                      // arguments
+	)
+	if err != nil {
+		zap.L().Error("[RabbitMQ]Setting QueueDeclare errors.")
+		return err
+	}
+
 	// 交换器与队列绑定
 	err = ch.QueueBind(
-		q.Name,                                // queue name
+		queueFromCreate.Name,                  // queue name
 		"",                                    // routing key
 		viper.GetString("rabbitmq.exchanger"), // exchange
 		false,
@@ -79,18 +94,33 @@ func Init() (err error) {
 		return err
 	}
 
-	// 设置消费
-	msgs, err = ch.Consume(
-		q.Name, // queue
-		"",     // consumer
-		true,   // auto-ack
-		false,  // exclusive
-		false,  // no-local
-		false,  // no-wait
-		nil,    // args
+	// 设置消费,接收来自信号产生端的消息
+	msgSignal, err = ch.Consume(
+		queueFromCreate.Name, // queue
+		"",                   // consumer
+		true,                 // auto-ack
+		false,                // exclusive
+		false,                // no-local
+		false,                // no-wait
+		nil,                  // args
 	)
 	if err != nil {
-		zap.L().Error("[RabbitMQ]Setting Consume errors.")
+		zap.L().Error("[RabbitMQ]Setting Consume from Create errors.")
+		return err
+	}
+
+	// 设置消费,接收来自信号分析端的消息
+	msgResult, err = ch.Consume(
+		queueFromAnalyze.Name, // queue
+		"",                    // consumer
+		true,                  // auto-ack
+		false,                 // exclusive
+		false,                 // no-local
+		false,                 // no-wait
+		nil,                   // args
+	)
+	if err != nil {
+		zap.L().Error("[RabbitMQ]Setting Consume from Analyze errors.")
 		return err
 	}
 
@@ -103,9 +133,9 @@ func Close() {
 	ch.Close()
 }
 
-// 获取json内容
-func Get() (signal models.Signal, err error) {
-	msg := <-msgs
+// 获取信号
+func GetSignal() (signal models.Signal, err error) {
+	msg := <-msgSignal
 	err = json.Unmarshal(msg.Body, &signal)
 	if err != nil {
 		zap.L().Sugar().Errorf("[RabbitMQ]Unmarshal errors(%v).", err)
@@ -113,15 +143,12 @@ func Get() (signal models.Signal, err error) {
 	return
 }
 
-// 推送json内容
-func Publish(body []byte) error {
-	return ch.Publish(
-		"",                     // exchange
-		"analyze_to_visualize", // routing key
-		false,                  // mandatory
-		false,                  // immediate
-		amqp.Publishing{
-			ContentType: viper.GetString("rabbitmq.content-type"),
-			Body:        body,
-		})
+// 获取结果
+func GetResult() (result models.Result, err error) {
+	msg := <-msgResult
+	err = json.Unmarshal(msg.Body, &result)
+	if err != nil {
+		zap.L().Sugar().Errorf("[RabbitMQ]Unmarshal errors(%v).", err)
+	}
+	return
 }

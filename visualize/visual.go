@@ -3,10 +3,17 @@ package main
 import (
 	"log"
 	"visual/logger"
-	mq "visual/messagequeue"
+	"visual/logic"
+	mq "visual/messageQueue"
+	"visual/routes"
 	"visual/settings"
 
+	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
+)
+
+var (
+	r *gin.Engine
 )
 
 // 产生错误中断程序
@@ -33,6 +40,11 @@ func setup() {
 		failOnError(err, "init RabbitMQ failed")
 	}
 
+	// 初始化线段树
+	logic.Init()
+
+	// 设置路由
+	r = routes.Setup(viper.GetString("app.mod"))
 }
 
 // 关闭
@@ -41,17 +53,17 @@ func close() {
 }
 
 func main() {
+
 	// 初始化以及关闭通道
 	setup()
 	defer close()
 
-	for {
-		// // 获取信号
-		// signal, err := mq.Get()
-		// if err != nil {
-		// 	zap.L().Error("[Analyze]Cannot Fetch signals.")
-		// 	break
-		// }
+	// 接收信号消息并动态更新
+	go logic.ReceiveSignalAndUpdate()
 
-	}
+	// 接收统计消息并动态更新
+	go logic.ReceiveResultAndUpdate()
+
+	// 启动路由
+	r.Run(":" + viper.GetString("app.port"))
 }

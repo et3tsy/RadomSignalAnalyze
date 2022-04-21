@@ -19,6 +19,15 @@ rabbitmq:
   port: "5672"
   content-type: "application/json"
   exchanger: "signal"
+  result_queue: "analyze_to_visualize"
+
+
+signal:
+  min: 1
+  max: 1000
 
 analyze:
   size: 100
+
+visual:
+  segments: 10

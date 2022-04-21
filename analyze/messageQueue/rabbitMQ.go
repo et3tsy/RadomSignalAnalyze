@@ -52,8 +52,8 @@ func Init() (err error) {
 		return err
 	}
 
-	// 声明队列
-	q, err := ch.QueueDeclare(
+	// 声明消息队列
+	queueGet, err := ch.QueueDeclare(
 		"",    // name
 		false, // durable
 		false, // delete when unused
@@ -68,7 +68,7 @@ func Init() (err error) {
 
 	// 交换器与队列绑定
 	err = ch.QueueBind(
-		q.Name,                                // queue name
+		queueGet.Name,                         // queue name
 		"",                                    // routing key
 		viper.GetString("rabbitmq.exchanger"), // exchange
 		false,
@@ -81,13 +81,13 @@ func Init() (err error) {
 
 	// 设置消费
 	msgs, err = ch.Consume(
-		q.Name, // queue
-		"",     // consumer
-		true,   // auto-ack
-		false,  // exclusive
-		false,  // no-local
-		false,  // no-wait
-		nil,    // args
+		queueGet.Name, // queue
+		"",            // consumer
+		true,          // auto-ack
+		false,         // exclusive
+		false,         // no-local
+		false,         // no-wait
+		nil,           // args
 	)
 	if err != nil {
 		zap.L().Error("[RabbitMQ]Setting Consume errors.")
@@ -116,10 +116,10 @@ func Get() (signal models.Signal, err error) {
 // 推送json内容
 func Publish(body []byte) error {
 	return ch.Publish(
-		"",                     // exchange
-		"analyze_to_visualize", // routing key
-		false,                  // mandatory
-		false,                  // immediate
+		"",                                       // exchange
+		viper.GetString("rabbitmq.result_queue"), // routing key
+		false,                                    // mandatory
+		false,                                    // immediate
 		amqp.Publishing{
 			ContentType: viper.GetString("rabbitmq.content-type"),
 			Body:        body,

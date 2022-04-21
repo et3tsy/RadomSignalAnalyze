@@ -19,3 +19,7 @@ rabbitmq:
   port: "5672"
   content-type: "application/json"
   exchanger: "signal"
+
+signal:
+  min: 1
+  max: 1000
